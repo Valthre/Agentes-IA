@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agente IA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes slide-in-up {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes slide-out-down {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(100%); opacity: 0; }
+      }
+      @keyframes fade-in-up {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes fade-in-scale {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-toast-in {
+        animation: fade-in-scale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^9.0.1",
+    "rehype-raw": "https://aistudiocdn.com/rehype-raw@^7.0.0",
+    "react-syntax-highlighter/dist/esm/styles/prism/tomorrow": "https://cdn.jsdelivr.net/npm/react-syntax-highlighter@15.5.0/dist/esm/styles/prism/tomorrow.js",
+    "react-syntax-highlighter": "https://aistudiocdn.com/react-syntax-highlighter@^15.6.6",
+    "react-syntax-highlighter/": "https://aistudiocdn.com/react-syntax-highlighter@^15.6.6/",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0"
+  }
+}
+</script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'slide-in-up': 'slide-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'slide-out-down': 'slide-out-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+            'fade-in': 'fade-in 0.3s ease-in-out',
+            'fade-in-fast': 'fade-in 0.2s ease-in-out',
+            'fade-in-scale': 'fade-in-scale 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          },
+          keyframes: {
+            'slide-in-up': {
+              from: { transform: 'translateY(100%)', opacity: '0' },
+              to: { transform: 'translateY(0)', opacity: '1' },
+            },
+            'slide-out-down': {
+              from: { transform: 'translateY(0)', opacity: '1' },
+              to: { transform: 'translateY(100%)', opacity: '0' },
+            },
+            'fade-in-up': {
+              from: { transform: 'translateY(20px)', opacity: '0' },
+              to: { transform: 'translateY(0)', opacity: '1' },
+            },
+            'fade-in': {
+              from: { opacity: '0' },
+              to: { opacity: '1' },
+            },
+            'fade-in-scale': {
+                from: { opacity: '0', transform: 'scale(0.95)' },
+                to: { opacity: '1', transform: 'scale(1)' },
+            },
+          }
+        }
+      }
+    }
+  </script>
+</head>
+  <body class="bg-gray-900 bg-gradient-to-br from-gray-950 to-gray-900">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

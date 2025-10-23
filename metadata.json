@@ -1,0 +1,7 @@
+{
+  "name": "Agente IA",
+  "description": "Uma plataforma de IA conversacional com uma galeria de agentes especialistas. Interaja com mentores, criadores e analistas, ative modos de pensamento avançados e personalize sua experiência para qualquer desafio.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
