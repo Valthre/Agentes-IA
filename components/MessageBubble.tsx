@@ -68,17 +68,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
     <ReactMarkdown 
         rehypePlugins={[rehypeRaw]}
         components={{
-            code({ node, inline, className, children, ...props }) {
-                return !inline ? (
-                    <CodeBlock className={className} {...props}>
+            code(props) {
+                const {children, className, node, ...rest} = props;
+                const match = /language-(\w+)/.exec(className || '');
+                return match ? (
+                    <CodeBlock className={className}>
                         {String(children).replace(/\n$/, '')}
                     </CodeBlock>
                 ) : (
-                    <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded-md font-mono text-xs" {...props}>
+                    <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded-md font-mono text-xs" {...rest}>
                         {children}
                     </code>
                 );
             },
+            table: ({node, ...props}) => (
+                <div className="my-4 overflow-x-auto rounded-lg border border-gray-700/50">
+                    <table {...props} />
+                </div>
+            ),
             hr: ({...props}) => <hr className="my-4 border-gray-700/50" {...props} />,
             h3: ({node, ...props}) => <h3 className="mt-4 font-semibold" {...props} />,
         }}
@@ -149,7 +156,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
                         </div>
                     </details>
                 )}
-                <div className="prose prose-invert prose-sm max-w-none break-words prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2">
+                <div className="prose prose-invert prose-sm max-w-none break-words 
+                                prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2
+                                prose-table:w-full prose-table:text-sm prose-table:border-collapse
+                                prose-thead:bg-gray-800/60 prose-thead:border-b-2 prose-thead:border-gray-700
+                                prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-th:text-gray-300 prose-th:uppercase prose-th:tracking-wider
+                                prose-tbody:tr:hover:bg-gray-800/40
+                                prose-td:px-4 prose-td:py-3 prose-td:align-top prose-td:border-t prose-td:border-gray-700/60">
                     {!isUser && isLastMessage && isThinking && mainContent.trim() === '' ? (
                       <TypingIndicator />
                     ) : (

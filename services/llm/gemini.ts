@@ -1,5 +1,26 @@
 import { GoogleGenAI, Content, Type } from "@google/genai";
 import { Message, Source, GenerationConfig, Persona } from "../../types";
+import { updateLiveQuotaFromHeaders } from "../usageService";
+
+// Monkey-patch global fetch to intercept Gemini API response headers for quota tracking
+const originalFetch = window.fetch;
+Object.defineProperty(window, 'fetch', {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const response = await originalFetch(input, init);
+        const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+        
+        if (url && typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
+            const modelMatch = url.match(/\/models\/([^:]+)/);
+            if (modelMatch && modelMatch[1]) {
+                updateLiveQuotaFromHeaders(modelMatch[1], response.headers);
+            }
+        }
+        return response;
+    }
+});
 
 const formatHistoryForGemini = (history: Message[]): Content[] => {
     const filteredHistory = history.filter((msg, index) => !(index === history.length - 1 && msg.role === 'agent' && msg.content === ''));
@@ -33,12 +54,12 @@ async function* streamDefaultAgentResponse(
         config.systemInstruction = persona.prompt;
     }
 
-    if (model === 'gemini-2.5-pro') {
+    if (model === 'gemini-3.1-pro-preview' || model === 'gemini-2.5-pro') {
         config.thinkingConfig = { thinkingBudget: 32768 };
     }
 
     const stream = await ai.models.generateContentStream({
-        model: model || "gemini-2.5-flash",
+        model: model || "gemini-3-flash-preview",
         contents: contents,
         config,
     });
@@ -97,7 +118,7 @@ async function* streamProfessionalAgentResponse(
             { role: 'user' as const, parts: [{ text: prompt }] }
         ];
 
-        const modelForAnalysis = persona.model || 'gemini-2.5-pro';
+        const modelForAnalysis = persona.model || 'gemini-3.1-pro-preview';
 
         const config: any = {
             systemInstruction: analysisSystemInstruction,
@@ -105,7 +126,7 @@ async function* streamProfessionalAgentResponse(
             ...generationConfig
         };
 
-        if (modelForAnalysis === 'gemini-2.5-pro') {
+        if (modelForAnalysis === 'gemini-3.1-pro-preview' || modelForAnalysis === 'gemini-2.5-pro') {
             config.thinkingConfig = { thinkingBudget: 32768 };
         }
 

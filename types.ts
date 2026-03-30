@@ -59,7 +59,7 @@ export interface Chat extends GenerationConfig {
 // --- API Usage Quota Types ---
 
 export type ApiTier = 'Free' | 'Tier 1' | 'Tier 2';
-export type TrackedModel = 'gemini-2.5-pro' | 'gemini-2.5-flash';
+export type TrackedModel = 'gemini-3.1-pro-preview' | 'gemini-3-flash-preview' | 'gemini-2.5-pro' | 'gemini-2.5-flash';
 
 export interface ModelQuota {
     RPM: number; // Requests Per Minute
@@ -71,6 +71,7 @@ export interface UsageData {
     dailyRequests: number;
     lastResetTimestampPST: string;
     requestsLog: { timestamp: number }[];
+    liveQuota?: ModelQuota;
 }
 
 export interface UsageState {

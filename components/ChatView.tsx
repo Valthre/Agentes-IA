@@ -4,7 +4,6 @@ import { useTranslation } from '../i18n';
 import { MessageBubble } from './MessageBubble';
 import { AdvancedChatControls } from './AdvancedChatControls';
 import ProfessionalReferralModal from './ProfessionalReferralModal';
-import ShareAgentModal from './ShareAgentModal';
 
 interface ChatViewProps {
   chat: Chat;
@@ -15,7 +14,8 @@ interface ChatViewProps {
   setChats: React.Dispatch<React.SetStateAction<Chat[]>>;
   apiKeys: { [key in LlmProvider]?: string } | null;
   status: AgentStatus;
-  setStatus: React.Dispatch<React.SetStateAction<Chat[]>>;
+  // Fix: Corrected the type for setStatus to align with the state it manages (AgentStatus).
+  setStatus: React.Dispatch<React.SetStateAction<AgentStatus>>;
   isAdvancedInterfaceEnabled: boolean;
   isSingleAgentMode: boolean;
 }
@@ -32,7 +32,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     
     const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
     const [referralModalPersonaId, setReferralModalPersonaId] = useState<string | null>(null);
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     const [isExiting, setIsExiting] = useState(false);
 
@@ -232,7 +231,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     return {
                         ...c,
                         personaId: newPersona.id,
-                        model: newPersona.model || 'gemini-2.5-flash',
+                        model: newPersona.model || 'gemini-3-flash-preview',
                         operatingMode: newPersona.operatingMode || OperatingMode.None,
                         temperature: newPersona.temperature,
                         topK: newPersona.topK,
@@ -256,6 +255,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
         });
     };
     
+    const handleExportChat = () => {
+        const chatData = JSON.stringify(chat, null, 2);
+        const blob = new Blob([chatData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        a.download = `${safeTitle || 'conversa'}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     const isNextMessageConfigModified = 
         nextMessageConfig.temperature !== (chat.temperature ?? activePersona?.temperature ?? undefined) ||
         nextMessageConfig.topK !== (chat.topK ?? activePersona?.topK ?? undefined) ||
@@ -304,8 +317,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
                   )}
               </div>
-              <button onClick={() => setIsShareModalOpen(true)} className="p-2 text-gray-400 hover:bg-gray-800 rounded-full transition-colors flex-shrink-0" aria-label={t('chat.shareAgent')}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+              <button onClick={handleExportChat} className="p-2 text-gray-400 hover:bg-gray-800 rounded-full transition-colors flex-shrink-0" aria-label={t('chat.exportConversation')}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
               </button>
             </header>
             
@@ -432,11 +447,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 isOpen={isReferralModalOpen}
                 onClose={() => setIsReferralModalOpen(false)}
                 personaId={referralModalPersonaId}
-            />
-            <ShareAgentModal
-                isOpen={isShareModalOpen}
-                onClose={() => setIsShareModalOpen(false)}
-                agent={activePersona}
             />
         </div>
     );

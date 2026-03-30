@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Chat, Persona, Message, AgentStatus, LlmProvider, GenerationConfig, OperatingMode } from './types';
-import { initialPersonas } from './personas';
+// Fix: Corrected import path to point to the module in the 'personas' directory.
+import { initialPersonas } from './personas/index';
 import { getLlmService } from './services/llmService';
 import * as usageService from './services/usageService';
 import ApiKeyModal from './components/ApiKeyModal';
@@ -15,7 +16,7 @@ const CHATS_KEY = 'ai-agent-chats';
 const ADVANCED_UI_KEY = 'ai-agent-advanced-ui';
 const DEFAULT_PROVIDER_KEY = 'llm-default-provider';
 
-export type AppTab = 'hub' | 'chats' | 'gallery' | 'settings';
+export type AppTab = 'hub' | 'chats' | 'web' | 'settings';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -31,6 +32,13 @@ const App: React.FC = () => {
   const [isSingleAgentMode, setIsSingleAgentMode] = useState(false);
   const [singleAgentModeError, setSingleAgentModeError] = useState<string | null>(null);
   const [isInitialising, setIsInitialising] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // Initial load from localStorage and URL check
   useEffect(() => {
@@ -71,7 +79,7 @@ const App: React.FC = () => {
             id: uuidv4(),
             title: agent.name,
             personaId: agent.id,
-            model: agent.model || 'gemini-2.5-flash',
+            model: agent.model || 'gemini-3-flash-preview',
             provider: agent.provider || (savedDefaultProvider ? JSON.parse(savedDefaultProvider) : 'gemini'),
             operatingMode: agent.operatingMode || OperatingMode.None,
             temperature: agent.temperature,
@@ -217,7 +225,7 @@ const App: React.FC = () => {
       id: uuidv4(),
       title: 'Nova Conversa',
       personaId: activePersona.id,
-      model: activePersona.model || 'gemini-2.5-flash',
+      model: activePersona.model || 'gemini-3-flash-preview',
       provider: activePersona.provider || defaultProvider,
       operatingMode: activePersona.operatingMode || OperatingMode.None,
       temperature: activePersona.temperature,
@@ -255,6 +263,24 @@ const App: React.FC = () => {
   const handleSavePersonas = (updatedPersonas: Persona[]) => {
       setPersonas(updatedPersonas);
   };
+
+  const handleImportChats = (importedChats: Chat[]) => {
+    const combinedChats = [...importedChats, ...chats];
+    const chatMap = new Map(combinedChats.map(c => [c.id, c]));
+    const uniqueChats = Array.from(chatMap.values());
+    
+    // Sort by the last message timestamp if available
+    uniqueChats.sort((a, b) => {
+        const lastMsgA = a.messages[a.messages.length - 1] as any;
+        const lastMsgB = b.messages[b.messages.length - 1] as any;
+        const timeA = lastMsgA?.timestamp || 0;
+        const timeB = lastMsgB?.timestamp || 0;
+        return timeB - timeA;
+    });
+
+    setChats(uniqueChats);
+    showToast(t('chatHistory.importSuccess', { count: importedChats.length }));
+  };
   
   const handleSetAdvancedInterface = (enabled: boolean) => {
     setAdvancedInterfaceEnabled(enabled);
@@ -284,42 +310,57 @@ const App: React.FC = () => {
     return <ApiKeyModal onSave={handleSaveApiKeys} />;
   }
   
-  if (activeChat) {
-    return (
-      <ChatView
-        chat={activeChat}
-        chats={chats}
-        personas={personas}
-        onGoBack={handleGoBack}
-        onProcessCommand={processCommand}
-        setChats={setChats}
-        apiKeys={apiKeys}
-        status={status}
-        setStatus={setStatus}
-        isAdvancedInterfaceEnabled={isAdvancedInterfaceEnabled}
-        isSingleAgentMode={isSingleAgentMode}
-      />
-    );
-  }
+  const AppUI = (
+    <>
+      {activeChat ? (
+        <ChatView
+          chat={activeChat}
+          chats={chats}
+          personas={personas}
+          onGoBack={handleGoBack}
+          onProcessCommand={processCommand}
+          setChats={setChats}
+          apiKeys={apiKeys}
+          status={status}
+          setStatus={setStatus}
+          isAdvancedInterfaceEnabled={isAdvancedInterfaceEnabled}
+          isSingleAgentMode={isSingleAgentMode}
+        />
+      ) : (
+        <MainTabView
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          personas={personas}
+          chats={chats}
+          onSelectChat={handleSelectChat}
+          onSelectAgent={handleSelectAgent}
+          onNewChat={handleNewChat}
+          onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
+          onSavePersonas={handleSavePersonas}
+          onImportChats={handleImportChats}
+          apiKeys={apiKeys}
+          onSaveApiKeys={handleSaveApiKeys}
+          defaultProvider={defaultProvider}
+          advancedInterfaceEnabled={isAdvancedInterfaceEnabled}
+          onSetAdvancedInterface={handleSetAdvancedInterface}
+        />
+      )}
+    </>
+  );
 
   return (
-    <MainTabView
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      personas={personas}
-      chats={chats}
-      onSelectChat={handleSelectChat}
-      onSelectAgent={handleSelectAgent}
-      onNewChat={handleNewChat}
-      onDeleteChat={handleDeleteChat}
-      onRenameChat={handleRenameChat}
-      onSavePersonas={handleSavePersonas}
-      apiKeys={apiKeys}
-      onSaveApiKeys={handleSaveApiKeys}
-      defaultProvider={defaultProvider}
-      advancedInterfaceEnabled={isAdvancedInterfaceEnabled}
-      onSetAdvancedInterface={handleSetAdvancedInterface}
-    />
+    <>
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 animate-toast-in border border-green-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium">{toast}</span>
+        </div>
+      )}
+      {AppUI}
+    </>
   );
 };
 

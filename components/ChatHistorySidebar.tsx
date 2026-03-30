@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Chat } from '../types';
 import { useTranslation } from '../i18n';
 
@@ -7,6 +7,7 @@ interface ChatHistoryViewProps {
   onSelectChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, newTitle: string) => void;
+  onImportChats: (chats: Chat[]) => void;
 }
 
 const ChatListItem: React.FC<{
@@ -73,9 +74,10 @@ const ChatListItem: React.FC<{
 };
 
 
-export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({ chats, onSelectChat, onDeleteChat, onRenameChat }) => {
+export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({ chats, onSelectChat, onDeleteChat, onRenameChat, onImportChats }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const { t } = useTranslation();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filteredChats = useMemo(() => {
         if (!searchQuery) return chats;
@@ -85,10 +87,67 @@ export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({ chats, onSelec
         );
     }, [chats, searchQuery]);
 
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result;
+                if (typeof content !== 'string') throw new Error("File content is not a string");
+                const importedData = JSON.parse(content);
+                
+                // Validate if it's a single chat or an array of chats
+                const chatsToImport = Array.isArray(importedData) ? importedData : [importedData];
+
+                // Basic validation
+                const isValid = chatsToImport.every((chat: any) => 
+                    chat.id && chat.title && Array.isArray(chat.messages)
+                );
+
+                if (isValid) {
+                    onImportChats(chatsToImport);
+                } else {
+                    alert(t('chatHistory.importError'));
+                }
+            } catch (error) {
+                console.error("Failed to import chats:", error);
+                alert(t('chatHistory.importError'));
+            }
+        };
+        reader.readAsText(file);
+        // Reset file input value to allow importing the same file again
+        event.target.value = '';
+    };
+
     return (
         <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto px-4">
             <header className="py-6 flex-shrink-0">
-                <h1 className="text-3xl font-bold text-white">{t('chatHistory.title')}</h1>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold text-white">{t('chatHistory.title')}</h1>
+                    <button
+                        onClick={handleImportClick}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-gray-700/80 hover:bg-gray-700 rounded-lg transition-colors"
+                        aria-label={t('chatHistory.import')}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span>{t('chatHistory.import')}</span>
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".json"
+                        className="hidden"
+                    />
+                </div>
                 <div className="relative mt-4">
                     <input
                         type="text"

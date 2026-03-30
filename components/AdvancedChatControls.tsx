@@ -65,6 +65,8 @@ export const AdvancedChatControls: React.FC<AdvancedChatControlsProps> = ({
                             <div>
                                 <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">{t('chat.advancedControls.model')} <Tooltip text={t('chat.advancedControls.modelTooltip')} /></label>
                                 <select value={chat.model} onChange={(e) => onChatUpdate('model', e.target.value)} className="mt-1 w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+                                    <option value="gemini-3.1-pro-preview">Gemini 3 Pro</option>
                                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                 </select>

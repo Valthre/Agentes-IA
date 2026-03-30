@@ -39,7 +39,12 @@ const ModelUsageCard: React.FC<{ model: TrackedModel; usage: UsageState }> = ({ 
     const rpm = usageService.calculateRPM(model);
     const rpd = modelData?.dailyRequests || 0;
     
-    const modelDisplayName = model === 'gemini-2.5-pro' ? 'Gemini 2.5 Pro' : 'Gemini 2.5 Flash';
+    const modelDisplayName = {
+        'gemini-3.1-pro-preview': 'Gemini 3.1 Pro',
+        'gemini-3-flash-preview': 'Gemini 3 Flash',
+        'gemini-2.5-pro': 'Gemini 2.5 Pro',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash'
+    }[model] || model;
 
     return (
         <div className="bg-gray-900 p-4 rounded-lg border border-gray-700/50 space-y-4">
@@ -99,6 +104,8 @@ export const ApiUsageView: React.FC = () => {
             </div>
 
             <div className="space-y-6">
+                <ModelUsageCard model="gemini-3.1-pro-preview" usage={usageState} />
+                <ModelUsageCard model="gemini-3-flash-preview" usage={usageState} />
                 <ModelUsageCard model="gemini-2.5-pro" usage={usageState} />
                 <ModelUsageCard model="gemini-2.5-flash" usage={usageState} />
             </div>

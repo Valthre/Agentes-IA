@@ -47,11 +47,14 @@ export const esTranslations = {
     searchPlaceholder: 'Buscar chats...',
     confirmDelete: '¿Estás seguro de que quieres eliminar el chat "{{title}}"?',
     noChats: 'No se encontraron chats.',
+    import: 'Importar',
+    importSuccess: '¡{{count}} chats importados con éxito!',
+    importError: 'Falló la importación. El archivo puede estar corrupto o en un formato no válido.',
   },
   bottomNav: {
     hub: 'Hub',
     chats: 'Chats',
-    gallery: 'Galería',
+    web: 'Web',
     settings: 'Ajustes',
     newChat: 'Nuevo Chat',
   },
@@ -78,6 +81,7 @@ export const esTranslations = {
     inputPlaceholder: 'Escribe tu mensaje aquí...',
     send: 'Enviar',
     shareAgent: 'Compartir Agente',
+    exportConversation: 'Exportar Conversación',
     advancedControls: {
       title: 'Controles Avanzados',
       sessionSettings: 'Configuración de la Sesión',
@@ -102,6 +106,14 @@ export const esTranslations = {
       topPTooltip: 'Controla la diversidad de la respuesta seleccionando palabras según su probabilidad acumulada. Un valor de 0.95 significa que se consideran el 95% de las palabras más probables.',
       resetToDefault: 'Restablecer a Predeterminados',
     }
+  },
+  webAgent: {
+    title: 'Agente Web',
+    description: 'Proporcione una URL y una tarea, y el agente analizará la página por usted.',
+    urlPlaceholder: 'https://ejemplo.com/articulo',
+    promptPlaceholder: 'Ej: Resume los puntos principales de este artículo...',
+    submitButton: 'Analizar',
+    error: 'Ocurrió un error al analizar la URL. Por favor, verifique el enlace y su clave de API.',
   },
   modals: {
     professionalReferral: {
@@ -167,19 +179,6 @@ export const esTranslations = {
       openaiPlatform: 'Plataforma OpenAI',
       defaultProvider: 'Proveedor Predeterminado para Nuevos Agentes',
       saveAndStart: 'Guardar y Empezar',
-    },
-    agentGallery: {
-      noAgentsFound: 'No se encontraron agentes.',
-      tryDifferentSearch: 'Prueba con una búsqueda diferente.',
-      orchestratorAgent: 'Agente Orquestador',
-      masterAgentDesc: 'El <b>Agente Maestro</b> analiza problemas complejos, reúne un equipo virtual de especialistas y sintetiza sus hallazgos en una única respuesta estratégica.',
-      masterAgentIdealFor: 'Ideal para: Planificación de negocios, análisis de causa raíz, brainstorming de proyectos multifacéticos.',
-      specialistsGallery: 'Galería de Especialistas',
-      learningZone: 'Zona de Aprendizaje: Mentores',
-      title: 'Galería de Agentes',
-      intro: 'Elige un agente especialista para iniciar una nueva conversación.',
-      searchPlaceholder: 'Buscar por nombre o habilidad...',
-      createCustomAgent: 'Crear Agente Personalizado',
     },
     settings: {
       saved: '¡Configuración guardada!',

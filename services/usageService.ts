@@ -4,14 +4,20 @@ const USAGE_STATE_KEY = 'gemini-api-usage-state';
 
 const QUOTAS: Record<ApiTier, Record<TrackedModel, ModelQuota>> = {
     'Free': {
+        'gemini-3.1-pro-preview': { RPM: 5, RPD: 100, TPM: 125_000 },
+        'gemini-3-flash-preview': { RPM: 10, RPD: 250, TPM: 250_000 },
         'gemini-2.5-pro': { RPM: 5, RPD: 100, TPM: 125_000 },
         'gemini-2.5-flash': { RPM: 10, RPD: 250, TPM: 250_000 },
     },
     'Tier 1': {
+        'gemini-3.1-pro-preview': { RPM: 150, RPD: 10_000, TPM: 2_000_000 },
+        'gemini-3-flash-preview': { RPM: 1_000, RPD: 10_000, TPM: 1_000_000 },
         'gemini-2.5-pro': { RPM: 150, RPD: 10_000, TPM: 2_000_000 },
         'gemini-2.5-flash': { RPM: 1_000, RPD: 10_000, TPM: 1_000_000 },
     },
     'Tier 2': {
+        'gemini-3.1-pro-preview': { RPM: 1_000, RPD: 50_000, TPM: 5_000_000 },
+        'gemini-3-flash-preview': { RPM: 2_000, RPD: 100_000, TPM: 3_000_000 },
         'gemini-2.5-pro': { RPM: 1_000, RPD: 50_000, TPM: 5_000_000 },
         'gemini-2.5-flash': { RPM: 2_000, RPD: 100_000, TPM: 3_000_000 },
     },
@@ -73,14 +79,46 @@ export const getUsageState = (): UsageState => {
 };
 
 export const getQuotaForModel = (tier: ApiTier, model: TrackedModel): ModelQuota => {
-    return QUOTAS[tier]?.[model] || { RPM: 0, RPD: 0, TPM: 0 };
+    const state = loadState();
+    const liveQuota = state.models[model]?.liveQuota;
+    return liveQuota || QUOTAS[tier]?.[model] || { RPM: 0, RPD: 0, TPM: 0 };
+};
+
+export const updateLiveQuotaFromHeaders = (model: string, headers: Headers) => {
+    const supportedModels: string[] = ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash'];
+    if (!supportedModels.includes(model)) return;
+    const trackedModel = model as TrackedModel;
+
+    const state = loadState();
+    
+    const limitRPM = headers.get('x-ratelimit-limit-requests');
+    const limitTPM = headers.get('x-ratelimit-limit-tokens');
+
+    if (limitRPM || limitTPM) {
+        if (!state.models[trackedModel]) {
+            state.models[trackedModel] = {
+                dailyRequests: 0,
+                lastResetTimestampPST: new Date().toISOString(),
+                requestsLog: [],
+            };
+        }
+
+        state.models[trackedModel]!.liveQuota = {
+            RPM: limitRPM ? parseInt(limitRPM) : (state.models[trackedModel]?.liveQuota?.RPM || QUOTAS[state.userTier][trackedModel].RPM),
+            TPM: limitTPM ? parseInt(limitTPM) : (state.models[trackedModel]?.liveQuota?.TPM || QUOTAS[state.userTier][trackedModel].TPM),
+            RPD: QUOTAS[state.userTier][trackedModel].RPD
+        };
+
+        saveState(state);
+    }
 };
 
 export const recordRequest = (model: string) => {
-    if (model !== 'gemini-2.5-pro' && model !== 'gemini-2.5-flash') {
+    const supportedModels: string[] = ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash'];
+    if (!supportedModels.includes(model)) {
         return; // Only track supported models
     }
-    const trackedModel: TrackedModel = model;
+    const trackedModel: TrackedModel = model as TrackedModel;
 
     const state = loadState();
     const now = Date.now();

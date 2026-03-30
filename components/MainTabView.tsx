@@ -4,7 +4,7 @@ import { AppTab } from '../App';
 import { HubView } from './HubView';
 import { BottomNavBar } from './BottomNavBar';
 import { ChatHistoryView } from './ChatHistorySidebar';
-import { AgentGalleryView } from './AgentGalleryModal';
+import { WebAgentView } from './WebAgentView';
 import { SettingsView } from './SettingsModal';
 
 
@@ -24,6 +24,7 @@ interface MainTabViewProps {
     defaultProvider: LlmProvider;
     advancedInterfaceEnabled: boolean;
     onSetAdvancedInterface: (enabled: boolean) => void;
+    onImportChats: (chats: Chat[]) => void;
 }
 
 const MainTabView: React.FC<MainTabViewProps> = (props) => {
@@ -43,15 +44,12 @@ const MainTabView: React.FC<MainTabViewProps> = (props) => {
                             onSelectChat={props.onSelectChat}
                             onDeleteChat={props.onDeleteChat}
                             onRenameChat={props.onRenameChat}
+                            onImportChats={props.onImportChats}
                         />;
-            case 'gallery':
-                const handleCreateCustomAgent = () => {
-                    props.setActiveTab('settings');
-                };
-                return <AgentGalleryView 
-                            agents={props.personas} 
-                            onSelectAgent={props.onSelectAgent} 
-                            onCreateCustomAgent={handleCreateCustomAgent}
+            case 'web':
+                return <WebAgentView
+                            personas={props.personas}
+                            apiKeys={props.apiKeys}
                         />;
             case 'settings':
                 return <SettingsView 

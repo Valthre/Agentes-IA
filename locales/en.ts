@@ -47,11 +47,14 @@ export const enTranslations = {
     searchPlaceholder: 'Search chats...',
     confirmDelete: 'Are you sure you want to delete the chat "{{title}}"?',
     noChats: 'No chats found.',
+    import: 'Import',
+    importSuccess: '{{count}} chats imported successfully!',
+    importError: 'Import failed. The file may be corrupt or in an invalid format.',
   },
   bottomNav: {
     hub: 'Hub',
     chats: 'Chats',
-    gallery: 'Gallery',
+    web: 'Web',
     settings: 'Settings',
     newChat: 'New Chat',
   },
@@ -78,6 +81,7 @@ export const enTranslations = {
     inputPlaceholder: 'Type your message here...',
     send: 'Send',
     shareAgent: 'Share Agent',
+    exportConversation: 'Export Conversation',
     advancedControls: {
       title: 'Advanced Controls',
       sessionSettings: 'Session Settings',
@@ -102,6 +106,14 @@ export const enTranslations = {
       topPTooltip: 'Controls response diversity by selecting words based on their cumulative probability. A value of 0.95 means 95% of the most likely words are considered.',
       resetToDefault: 'Reset to Defaults',
     }
+  },
+  webAgent: {
+    title: 'Web Agent',
+    description: 'Provide a URL and a task, and the agent will analyze the page for you.',
+    urlPlaceholder: 'https://example.com/article',
+    promptPlaceholder: 'E.g., Summarize the main points of this article...',
+    submitButton: 'Analyze',
+    error: 'An error occurred while analyzing the URL. Please check the link and your API key.',
   },
   modals: {
     professionalReferral: {
@@ -167,19 +179,6 @@ export const enTranslations = {
       openaiPlatform: 'OpenAI Platform',
       defaultProvider: 'Default Provider for New Agents',
       saveAndStart: 'Save & Start',
-    },
-    agentGallery: {
-      noAgentsFound: 'No agents found.',
-      tryDifferentSearch: 'Try a different search.',
-      orchestratorAgent: 'Orchestrator Agent',
-      masterAgentDesc: 'The <b>Master Agent</b> analyzes complex problems, assembles a virtual team of specialists, and synthesizes their findings into a single, strategic response.',
-      masterAgentIdealFor: 'Ideal for: Business planning, root cause analysis, multifaceted project brainstorming.',
-      specialistsGallery: 'Specialists Gallery',
-      learningZone: 'Learning Zone: Mentors',
-      title: 'Agent Gallery',
-      intro: 'Choose a specialist agent to start a new conversation.',
-      searchPlaceholder: 'Search by name or skill...',
-      createCustomAgent: 'Create Custom Agent',
     },
     settings: {
       saved: 'Settings saved!',

@@ -25,7 +25,7 @@ const getAgentVisuals = (agent: Persona): { icon: React.ReactNode, color: string
         case 'dev-senior': case 'philosopher': case 'analytical-generalist': case 'product-architect': return { icon: <TechBot />, color: 'text-purple-400', gradient: 'from-purple-900/50 to-gray-950' };
         case 'hollywood-writer': case 'creative': case 'interior-designer': return { icon: <CreativeBot />, color: 'text-green-400', gradient: 'from-green-900/50 to-gray-950' };
         case 'marketing-guru': case 'career-coach': case 'financial-advisor': case 'travel-agent': return { icon: <BusinessBot />, color: 'text-blue-400', gradient: 'from-blue-900/50 to-gray-950' };
-        case 'historian': case 'legal-informant': case 'it-informant': return { icon: <AcademicBot />, color: 'text-yellow-600', gradient: 'from-yellow-900/50 to-gray-950' };
+        case 'historian': case 'legal-informant': case 'it-informant': case 'legal-memorandum': return { icon: <AcademicBot />, color: 'text-yellow-600', gradient: 'from-yellow-900/50 to-gray-950' };
         case 'chef': case 'translator': case 'personal-trainer': return { icon: <LifestyleBot />, color: 'text-teal-400', gradient: 'from-teal-900/50 to-gray-950' };
         default: return { icon: <DefaultBot />, color: 'text-gray-400', gradient: 'from-gray-800 to-gray-900' };
     }
@@ -40,11 +40,11 @@ interface HubViewProps {
 
 const FeaturedAgentCard: React.FC<{ agent: Persona; onSelect: () => void; }> = ({ agent, onSelect }) => {
     const visuals = getAgentVisuals(agent);
-    const isAdvanced = agent.model === 'gemini-2.5-pro';
+    const isAdvanced = agent.model === 'gemini-3.1-pro-preview' || agent.model === 'gemini-2.5-pro';
     return (
         <div 
             onClick={onSelect}
-            className={`group relative flex-shrink-0 w-full md:w-[48%] h-56 rounded-2xl cursor-pointer overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-900/20 bg-gradient-to-br ${visuals.gradient}`}
+            className={`group relative flex-shrink-0 w-full md:w-[48%] lg:w-[31.5%] h-56 rounded-2xl cursor-pointer overflow-hidden border border-gray-800 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-900/20 bg-gradient-to-br ${visuals.gradient}`}
         >
             <div className={`absolute -top-8 -right-8 w-48 h-48 opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-300 ${visuals.color}`}>
                 {visuals.icon}
@@ -81,7 +81,7 @@ const RecentChatCard: React.FC<{ chat: Chat; persona?: Persona; onSelect: () => 
 
 const SmallAgentCard: React.FC<{ agent: Persona; onSelect: () => void; }> = ({ agent, onSelect }) => {
     const visuals = getAgentVisuals(agent);
-    const isAdvanced = agent.model === 'gemini-2.5-pro';
+    const isAdvanced = agent.model === 'gemini-3.1-pro-preview' || agent.model === 'gemini-2.5-pro';
     return (
         <div onClick={onSelect} className="group flex-shrink-0 w-52 h-full flex flex-col bg-gray-900 rounded-xl cursor-pointer border border-gray-800 hover:border-purple-500/50 transition-all duration-200 transform hover:-translate-y-1 p-4 hover:shadow-xl hover:shadow-purple-900/30">
             <div className={`w-12 h-12 mb-3 ${visuals.color}`}>{visuals.icon}</div>
@@ -111,7 +111,7 @@ const AgentCarousel: React.FC<{ title: string; agents: Persona[]; onSelectAgent:
 
 export const HubView: React.FC<HubViewProps> = ({ personas, chats, onSelectChat, onSelectAgent }) => {
     const { t } = useTranslation();
-    const featuredAgents = personas.filter(p => ['master-agent', 'it-informant', 'legal-informant'].includes(p.id));
+    const featuredAgents = personas.filter(p => ['analytical-generalist', 'legal-informant', 'legal-memorandum'].includes(p.id));
     const recentChats = chats.slice(0, 5);
     const specialistAgents = personas.filter(p => p.category === 'specialist' && !featuredAgents.some(fa => fa.id === p.id));
     const mentorAgents = personas.filter(p => p.category === 'mentor' && !featuredAgents.some(fa => fa.id === p.id));
