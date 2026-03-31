@@ -26,6 +26,7 @@ export const enTranslations = {
     cancel: 'Cancel',
     saveAndRegenerate: 'Save & Regenerate',
     showReasoning: 'Show Reasoning',
+    thinking: 'Thinking...',
     sources: 'Sources',
     editMessage: 'Edit message',
     prevResponse: 'Previous response',

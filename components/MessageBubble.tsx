@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 import { Message } from '../types';
 import CodeBlock from './CodeBlock';
 import { useTranslation } from '../i18n';
@@ -66,8 +67,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
   
   const renderMarkdown = (text: string) => (
     <ReactMarkdown 
+        remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
         components={{
+            // @ts-ignore - Safety for thinking tags that might leak into markdown
+            thinking: ({children}) => <div className="italic text-gray-400 border-l-2 border-purple-500/30 pl-3 my-2">{children}</div>,
             code(props) {
                 const {children, className, node, ...rest} = props;
                 const match = /language-(\w+)/.exec(className || '');
@@ -82,9 +86,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
                 );
             },
             table: ({node, ...props}) => (
-                <div className="my-4 overflow-x-auto rounded-lg border border-gray-700/50">
-                    <table {...props} />
+                <div className="not-prose my-5 w-full overflow-x-auto rounded-xl border border-gray-700/60 bg-gray-900/30 shadow-sm">
+                    <table className="w-full text-sm text-left border-collapse text-gray-200" {...props} />
                 </div>
+            ),
+            thead: ({node, ...props}) => (
+                <thead className="bg-gray-800/80 text-xs uppercase text-gray-400 border-b border-gray-700/60" {...props} />
+            ),
+            th: ({node, ...props}) => (
+                <th className="px-4 py-3.5 font-semibold tracking-wider" {...props} />
+            ),
+            tbody: ({node, ...props}) => (
+                <tbody className="divide-y divide-gray-700/50" {...props} />
+            ),
+            tr: ({node, ...props}) => (
+                <tr className="hover:bg-gray-800/50 transition-colors duration-150" {...props} />
+            ),
+            td: ({node, ...props}) => (
+                <td className="px-4 py-3 align-top leading-relaxed" {...props} />
             ),
             hr: ({...props}) => <hr className="my-4 border-gray-700/50" {...props} />,
             h3: ({node, ...props}) => <h3 className="mt-4 font-semibold" {...props} />,
@@ -93,10 +112,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
   );
 
   const content = message.content;
-  const reasoningRegex = /<thinking>([\s\S]*?)<\/thinking>/;
-  const reasoningMatch = content.match(reasoningRegex);
-  const reasoningText = reasoningMatch ? reasoningMatch[1].trim() : null;
-  const mainContent = content.replace(reasoningRegex, '').trim();
+  
+  let reasoningText: string | null = null;
+  let mainContent = content;
+  let isReasoningComplete = true;
+
+  if (!isUser) {
+    // Use regex for more robust extraction (case-insensitive)
+    const thinkingRegex = /<thinking>([\s\S]*?)(<\/thinking>|$)/i;
+    const match = mainContent.match(thinkingRegex);
+    
+    if (match) {
+      reasoningText = match[1].trim();
+      isReasoningComplete = match[2].toLowerCase() === '</thinking>';
+      
+      // Remove the thinking block from mainContent
+      mainContent = mainContent.replace(thinkingRegex, '').trim();
+    }
+  }
+  
+  mainContent = mainContent.trim();
   
   const hasVariants = message.variants && message.variants.length > 1;
   const activeVariantIndex = message.activeVariantIndex ?? 0;
@@ -109,7 +144,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
     });
   };
   
-  const SENSITIVE_PERSONAS = ['legal-informant', 'financial-advisor', 'finance-guide'];
+  const SENSITIVE_PERSONAS = ['legal-informant', 'financial-advisor', 'finance-guide', 'wise-investor'];
   const isLegalInformant = personaId === 'legal-informant';
 
   return (
@@ -146,29 +181,37 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLastMes
             </div>
           ) : (
               <>
-                {reasoningText && !isUser && (
-                    <details className="mb-3 bg-gray-800/50 p-3 rounded-lg border border-gray-700/50">
-                        <summary className="cursor-pointer text-xs font-semibold text-purple-400 hover:text-purple-300 select-none">
-                            {t('messageBubble.showReasoning')}
+                {reasoningText !== null && !isUser && (
+                    <details 
+                        className="mb-4 bg-gray-900/60 rounded-xl border border-gray-700/50 overflow-hidden shadow-inner"
+                        open={!isReasoningComplete}
+                    >
+                        <summary className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm font-medium text-purple-400 hover:text-purple-300 hover:bg-gray-800/50 transition-colors select-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${!isReasoningComplete ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                {isReasoningComplete ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                )}
+                            </svg>
+                            {isReasoningComplete ? t('messageBubble.showReasoning') : t('messageBubble.thinking')}
                         </summary>
-                        <div className="prose prose-invert prose-sm max-w-none mt-2 pt-2 border-t border-gray-700/50">
-                            {renderMarkdown(reasoningText)}
+                        <div className="px-4 pb-4 pt-2 border-t border-gray-700/50 bg-gray-900/40">
+                            <div className="prose prose-invert prose-sm max-w-none text-gray-400">
+                                {renderMarkdown(reasoningText)}
+                                {!isReasoningComplete && <span className="inline-block w-1 h-4 bg-purple-400/70 ml-1 animate-pulse" />}
+                            </div>
                         </div>
                     </details>
                 )}
                 <div className="prose prose-invert prose-sm max-w-none break-words 
-                                prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2
-                                prose-table:w-full prose-table:text-sm prose-table:border-collapse
-                                prose-thead:bg-gray-800/60 prose-thead:border-b-2 prose-thead:border-gray-700
-                                prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold prose-th:text-gray-300 prose-th:uppercase prose-th:tracking-wider
-                                prose-tbody:tr:hover:bg-gray-800/40
-                                prose-td:px-4 prose-td:py-3 prose-td:align-top prose-td:border-t prose-td:border-gray-700/60">
-                    {!isUser && isLastMessage && isThinking && mainContent.trim() === '' ? (
+                                prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2">
+                    {!isUser && isLastMessage && isThinking && mainContent.trim() === '' && isReasoningComplete ? (
                       <TypingIndicator />
                     ) : (
                       <>
                         {renderMarkdown(mainContent)}
-                        {isThinking && isLastMessage && <span className="inline-block w-1 h-4 bg-white/70 ml-1 animate-pulse" />}
+                        {isThinking && isLastMessage && isReasoningComplete && <span className="inline-block w-1 h-4 bg-white/70 ml-1 animate-pulse" />}
                       </>
                     )}
                 </div>

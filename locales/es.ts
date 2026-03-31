@@ -26,6 +26,7 @@ export const esTranslations = {
     cancel: 'Cancelar',
     saveAndRegenerate: 'Guardar y Regenerar',
     showReasoning: 'Mostrar Razonamiento',
+    thinking: 'Pensando...',
     sources: 'Fuentes',
     editMessage: 'Editar mensaje',
     prevResponse: 'Respuesta anterior',

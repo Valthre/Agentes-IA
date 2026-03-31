@@ -54,10 +54,6 @@ async function* streamDefaultAgentResponse(
         config.systemInstruction = persona.prompt;
     }
 
-    if (model === 'gemini-3.1-pro-preview' || model === 'gemini-2.5-pro') {
-        config.thinkingConfig = { thinkingBudget: 32768 };
-    }
-
     const stream = await ai.models.generateContentStream({
         model: model || "gemini-3-flash-preview",
         contents: contents,

@@ -145,12 +145,20 @@ const App: React.FC = () => {
           ...nextMessageConfig
       };
       
+      // Inject available agents into the prompt so the agent knows who to recommend
+      const availableAgentsList = personas.map(p => `- **${p.name}**: ${p.description || 'Especialista'}`).join('\n');
+      
+      const globalThinkingInstruction = `\n\n**DIRETRIZ OBRIGATÓRIA DE RACIOCÍNIO (THINKING):**\nAntes de fornecer sua resposta final ao usuário, você DEVE estruturar todo o seu raciocínio, planejamento e análise dentro de tags <thinking> e </thinking>. NADA deve ser escrito antes de abrir a tag <thinking>. Sua resposta final ao usuário deve começar EXATAMENTE após o fechamento da tag </thinking>.`;
+      
+      const injectedPrompt = `${activePersona.prompt}\n\n---\n\n**Agentes Disponíveis no Sistema:**\nVocê pode recomendar os seguintes agentes caso a necessidade do usuário fuja da sua especialidade:\n${availableAgentsList}${globalThinkingInstruction}`;
+      const personaWithContext = { ...activePersona, prompt: injectedPrompt };
+      
       const stream = llmService.streamAiChatResponse(
           command, 
           history, 
           chatForCommand.model, 
           apiKey, 
-          activePersona,
+          personaWithContext,
           generationConfig
       );
 

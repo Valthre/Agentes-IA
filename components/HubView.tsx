@@ -111,7 +111,7 @@ const AgentCarousel: React.FC<{ title: string; agents: Persona[]; onSelectAgent:
 
 export const HubView: React.FC<HubViewProps> = ({ personas, chats, onSelectChat, onSelectAgent }) => {
     const { t } = useTranslation();
-    const featuredAgents = personas.filter(p => ['analytical-generalist', 'legal-informant', 'legal-memorandum'].includes(p.id));
+    const featuredAgents = personas.filter(p => ['analytical-generalist', 'legal-informant', 'legal-memorandum', 'wise-investor'].includes(p.id));
     const recentChats = chats.slice(0, 5);
     const specialistAgents = personas.filter(p => p.category === 'specialist' && !featuredAgents.some(fa => fa.id === p.id));
     const mentorAgents = personas.filter(p => p.category === 'mentor' && !featuredAgents.some(fa => fa.id === p.id));

@@ -26,6 +26,7 @@ export const ptBRTranslations = {
     cancel: 'Cancelar',
     saveAndRegenerate: 'Salvar e Gerar Novamente',
     showReasoning: 'Mostrar Raciocínio',
+    thinking: 'Pensando...',
     sources: 'Fontes',
     editMessage: 'Editar mensagem',
     prevResponse: 'Resposta anterior',
