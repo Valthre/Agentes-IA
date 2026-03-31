@@ -60,8 +60,34 @@ async function* streamDefaultAgentResponse(
         config,
     });
     
+    let inNativeThought = false;
     for await (const chunk of stream) {
-        const text = chunk.text;
+        let text = "";
+        const parts = chunk.candidates?.[0]?.content?.parts;
+        if (parts) {
+            for (const part of parts) {
+                if ('thought' in part && typeof part.thought === 'string') {
+                    if (!inNativeThought) {
+                        text += "<thinking>\n";
+                        inNativeThought = true;
+                    }
+                    text += part.thought;
+                } else if ('text' in part && typeof part.text === 'string') {
+                    if (inNativeThought) {
+                        text += "\n</thinking>\n";
+                        inNativeThought = false;
+                    }
+                    text += part.text;
+                }
+            }
+        } else if (chunk.text) {
+            if (inNativeThought) {
+                text += "\n</thinking>\n";
+                inNativeThought = false;
+            }
+            text += chunk.text;
+        }
+
         const groundingChunks = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks;
         const sources: Source[] = [];
 
@@ -75,7 +101,14 @@ async function* streamDefaultAgentResponse(
                 }
             }
         }
-        yield { text, sources: sources.length > 0 ? sources : undefined };
+        
+        if (text || sources.length > 0) {
+            yield { text: text || undefined, sources: sources.length > 0 ? sources : undefined };
+        }
+    }
+    
+    if (inNativeThought) {
+        yield { text: "\n</thinking>\n" };
     }
 }
 
@@ -122,19 +155,47 @@ async function* streamProfessionalAgentResponse(
             ...generationConfig
         };
 
-        if (modelForAnalysis === 'gemini-3.1-pro-preview' || modelForAnalysis === 'gemini-2.5-pro') {
-            config.thinkingConfig = { thinkingBudget: 32768 };
-        }
-
         const stream = await ai.models.generateContentStream({
             model: modelForAnalysis,
             contents,
             config,
         });
 
+        let inNativeThought = false;
         for await (const chunk of stream) {
-            const text = chunk.text;
-            yield { text };
+            let text = "";
+            const parts = chunk.candidates?.[0]?.content?.parts;
+            if (parts) {
+                for (const part of parts) {
+                    if ('thought' in part && typeof part.thought === 'string') {
+                        if (!inNativeThought) {
+                            text += "<thinking>\n";
+                            inNativeThought = true;
+                        }
+                        text += part.thought;
+                    } else if ('text' in part && typeof part.text === 'string') {
+                        if (inNativeThought) {
+                            text += "\n</thinking>\n";
+                            inNativeThought = false;
+                        }
+                        text += part.text;
+                    }
+                }
+            } else if (chunk.text) {
+                if (inNativeThought) {
+                    text += "\n</thinking>\n";
+                    inNativeThought = false;
+                }
+                text += chunk.text;
+            }
+            
+            if (text) {
+                yield { text };
+            }
+        }
+        
+        if (inNativeThought) {
+            yield { text: "\n</thinking>\n" };
         }
 
     } catch (error) {
@@ -159,10 +220,16 @@ export async function* streamAiChatResponse(
     try {
         const ai = new GoogleGenAI({ apiKey });
 
+        let streamGenerator;
         if (persona.id === 'professional-agent') {
-            yield* streamProfessionalAgentResponse(ai, prompt, history, persona, generationConfig);
+            streamGenerator = streamProfessionalAgentResponse(ai, prompt, history, persona, generationConfig);
         } else {
-            yield* streamDefaultAgentResponse(ai, prompt, history, model, persona, generationConfig);
+            streamGenerator = streamDefaultAgentResponse(ai, prompt, history, model, persona, generationConfig);
+        }
+
+        for await (const chunk of streamGenerator) {
+            console.log("Stream chunk:", chunk);
+            yield chunk;
         }
 
     } catch (error: any) {

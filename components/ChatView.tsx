@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Message, AgentStatus, Chat, Persona, OperatingMode, LlmProvider, GenerationConfig } from '../types';
 import { useTranslation } from '../i18n';
 import { MessageBubble } from './MessageBubble';
@@ -14,11 +14,17 @@ interface ChatViewProps {
   setChats: React.Dispatch<React.SetStateAction<Chat[]>>;
   apiKeys: { [key in LlmProvider]?: string } | null;
   status: AgentStatus;
-  // Fix: Corrected the type for setStatus to align with the state it manages (AgentStatus).
   setStatus: React.Dispatch<React.SetStateAction<AgentStatus>>;
   isAdvancedInterfaceEnabled: boolean;
   isSingleAgentMode: boolean;
 }
+
+// ─── Helper: generates a stable message key ─────────────────────────────────
+const getMessageKey = (msg: Message, index: number): string => {
+  const prefix = msg.role === 'user' ? 'u' : 'a';
+  const hash = msg.content.length > 0 ? msg.content.slice(0, 20).replace(/\s/g, '') : 'empty';
+  return `${prefix}-${index}-${hash}`;
+};
 
 export const ChatView: React.FC<ChatViewProps> = ({
   chat, chats, personas, onGoBack, onProcessCommand, setChats, apiKeys, status, setStatus, isAdvancedInterfaceEnabled, isSingleAgentMode
@@ -35,257 +41,314 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const [isExiting, setIsExiting] = useState(false);
 
-    const activePersona = personas.find(p => p.id === chat.personaId);
+    // ─── Memoized values ─────────────────────────────────────────────────
+    const activePersona = useMemo(
+      () => personas.find(p => p.id === chat.personaId),
+      [personas, chat.personaId]
+    );
+
+    const SUGGESTION_CHIPS = useMemo(() => [
+        t('chat.suggestionChipComplex'),
+        t('chat.suggestionChipProject'),
+        t('chat.suggestionChipCompare'),
+        t('chat.suggestionChipActAs'),
+    ], [t]);
+
+    const lastMessage = useMemo(
+      () => chat.messages[chat.messages.length - 1],
+      [chat.messages]
+    );
     
+    const isIdle = status === AgentStatus.Idle;
+    const isThinking = status === AgentStatus.Thinking;
+    const canSubmit = inputText.trim().length > 0 && isIdle;
+    const showSuggestions = chat.messages.length <= 1 && !isSingleAgentMode;
+    
+    // ─── State: next message config ──────────────────────────────────────
     const [nextMessageConfig, setNextMessageConfig] = useState<GenerationConfig>({
         temperature: chat.temperature ?? activePersona?.temperature,
         topK: chat.topK ?? activePersona?.topK,
         topP: chat.topP ?? activePersona?.topP,
     });
     
-    const advancedControlsAnchorRef = useRef<HTMLButtonElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const conversationEndRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    const handleGoBack = () => {
-        setIsExiting(true);
-        setTimeout(onGoBack, 300); // Match animation duration
-    };
-
-    const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
-        conversationEndRef.current?.scrollIntoView({ behavior });
-    };
-
+    // Sync nextMessageConfig when persona or chat-level config changes
     useEffect(() => {
-        if (isUserAtBottom) {
-            scrollToBottom('smooth');
-        }
-    }, [chat.messages.length, chat.messages[chat.messages.length - 1]?.content, isUserAtBottom]);
-    
-    const handleScroll = useCallback(() => {
-        const container = scrollContainerRef.current;
-        if (container) {
-            const threshold = 50; // pixels
-            const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
-            setIsUserAtBottom(atBottom);
-            setShowScrollButton(!atBottom);
-        }
-    }, []);
-    
-    useEffect(() => {
-        const container = scrollContainerRef.current;
-        container?.addEventListener('scroll', handleScroll);
-        // Initial check
-        handleScroll();
-        return () => container?.removeEventListener('scroll', handleScroll);
-    }, [handleScroll]);
-
-    const handleTextSubmit = (event?: React.FormEvent) => {
-        event?.preventDefault();
-        if (inputText.trim() && activePersona) {
-            
-            const command = inputText.trim();
-            const userMessage: Message = { role: 'user', content: command };
-            const agentMessagePlaceholder: Message = { role: 'agent', content: '', sources: [], variants: [], activeVariantIndex: 0 };
-            
-            const chatsForCommand = chats.map(c => {
-                if (c.id === chat.id) {
-                    const isNewChat = c.messages.length <= 1 && !isSingleAgentMode;
-                    return {
-                        ...c,
-                        title: isNewChat ? command.substring(0, 40) + (command.length > 40 ? '...' : '') : c.title,
-                        messages: [...c.messages, userMessage, agentMessagePlaceholder],
-                    };
-                }
-                return c;
-            });
-            
-            const chatForCommand = chatsForCommand.find(c => c.id === chat.id)!;
-            onProcessCommand(command, chatForCommand, activePersona, chatsForCommand, nextMessageConfig);
-            setInputText('');
-        }
-    };
-
-    const handleRegenerate = () => {
-        if (!activePersona || status !== AgentStatus.Idle) return;
-
-        let lastUserMessage: Message | null = null;
-
-        for (let i = chat.messages.length - 1; i >= 0; i--) {
-            if (chat.messages[i].role === 'user') {
-                lastUserMessage = chat.messages[i];
-                break;
-            }
-        }
-        
-        if (!lastUserMessage) return;
-
-        const commandToRegen = lastUserMessage.content;
-        
-        const chatsForCommand = chats.map(c => {
-            if (c.id === chat.id) {
-                const messages = [...c.messages];
-                const lastAgentMessage = messages[messages.length - 1];
-
-                if (lastAgentMessage?.role === 'agent') {
-                    lastAgentMessage.content = '';
-                    lastAgentMessage.sources = [];
-                }
-                return { ...c, messages };
-            }
-            return c;
-        });
-        
-        const chatForCommand = chatsForCommand.find(c => c.id === chat.id)!;
-        onProcessCommand(commandToRegen, chatForCommand, activePersona, chatsForCommand);
-    };
-    
-    const handleEditUserMessage = (messageIndex: number, newContent: string) => {
-        if (!activePersona || status !== AgentStatus.Idle) return;
-
-        const chatsForCommand = chats.map(c => {
-            if (c.id === chat.id) {
-                const truncatedMessages = c.messages.slice(0, messageIndex);
-                const updatedUserMessage: Message = { ...c.messages[messageIndex], content: newContent };
-                truncatedMessages.push(updatedUserMessage);
-                
-                const agentMessagePlaceholder: Message = { role: 'agent', content: '' };
-                truncatedMessages.push(agentMessagePlaceholder);
-
-                return { ...c, messages: truncatedMessages };
-            }
-            return c;
-        });
-
-        const chatForCommand = chatsForCommand.find(c => c.id === chat.id)!;
-        onProcessCommand(newContent, chatForCommand, activePersona, chatsForCommand);
-    };
-
-    const handleVariantChange = (direction: 'prev' | 'next') => {
-        setChats(prevChats => prevChats.map(c => {
-            if (c.id === chat.id) {
-                const messages = [...c.messages];
-                const lastMessage = messages[messages.length - 1];
-                if (lastMessage?.role === 'agent' && lastMessage.variants && lastMessage.activeVariantIndex !== undefined) {
-                    const totalVariants = lastMessage.variants.length;
-                    let newIndex = lastMessage.activeVariantIndex;
-                    if (direction === 'prev' && newIndex > 0) {
-                        newIndex--;
-                    } else if (direction === 'next' && newIndex < totalVariants - 1) {
-                        newIndex++;
-                    }
-
-                    const newVariant = lastMessage.variants[newIndex];
-                    if (newVariant) {
-                        lastMessage.content = newVariant.content;
-                        lastMessage.sources = newVariant.sources;
-                        lastMessage.activeVariantIndex = newIndex;
-                    }
-                }
-                return { ...c, messages };
-            }
-            return c;
-        }));
-    };
-    
-    const SUGGESTION_CHIPS = [
-        t('chat.suggestionChipComplex'),
-        t('chat.suggestionChipProject'),
-        t('chat.suggestionChipCompare'),
-        t('chat.suggestionChipActAs'),
-    ];
-
-    const handleSuggestionClick = (suggestion: string) => {
-      setInputText('');
-      if (activePersona) {
-          const userMessage: Message = { role: 'user', content: suggestion };
-          const agentMessagePlaceholder: Message = { role: 'agent', content: '' };
-          const updatedChatsArray = chats.map(c => {
-              if (c.id === chat.id) {
-                  return { ...c, messages: [...c.messages, userMessage, agentMessagePlaceholder] };
-              }
-              return c;
-          });
-          const updatedChat = updatedChatsArray.find(c => c.id === chat.id)!;
-          onProcessCommand(suggestion, updatedChat, activePersona, updatedChatsArray);
-      }
-    };
-
-    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleTextSubmit();
-        }
-    };
-    
-    const handleChatUpdate = (key: keyof Chat, value: any) => {
-        setChats(prev => prev.map(c => c.id === chat.id ? { ...c, [key]: value } : c));
-    };
-
-    const handlePersonaChange = (newPersonaId: string) => {
-        const newPersona = personas.find(p => p.id === newPersonaId);
-        if (newPersona) {
-            setChats(prev => prev.map(c => {
-                if (c.id === chat.id) {
-                    return {
-                        ...c,
-                        personaId: newPersona.id,
-                        model: newPersona.model || 'gemini-3-flash-preview',
-                        operatingMode: newPersona.operatingMode || OperatingMode.None,
-                        temperature: newPersona.temperature,
-                        topK: newPersona.topK,
-                        topP: newPersona.topP,
-                    };
-                }
-                return c;
-            }));
-        }
-    };
-
-    const handleNextMessageConfigChange = (key: keyof GenerationConfig, value: number) => {
-        setNextMessageConfig(prev => ({ ...prev, [key]: value }));
-    };
-
-    const handleResetNextMessageConfig = () => {
         setNextMessageConfig({
             temperature: chat.temperature ?? activePersona?.temperature,
             topK: chat.topK ?? activePersona?.topK,
             topP: chat.topP ?? activePersona?.topP,
         });
-    };
+    }, [chat.personaId, chat.temperature, chat.topK, chat.topP, activePersona]);
+
+    // ─── Refs ────────────────────────────────────────────────────────────
+    const advancedControlsAnchorRef = useRef<HTMLButtonElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const conversationEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isSubmittingRef = useRef(false); // prevents double-submit
+
+    // ─── Central command dispatcher (eliminates duplication) ─────────────
+    const dispatchCommand = useCallback((
+      command: string,
+      buildMessages: (currentMessages: Message[]) => Message[],
+      config?: GenerationConfig
+    ) => {
+        if (!activePersona) return;
+
+        const updatedChats = chats.map(c => {
+            if (c.id !== chat.id) return c;
+
+            const newMessages = buildMessages([...c.messages]);
+            const isNewChat = c.messages.length <= 1 && !isSingleAgentMode;
+
+            return {
+                ...c,
+                title: isNewChat 
+                    ? command.substring(0, 40) + (command.length > 40 ? '...' : '') 
+                    : c.title,
+                messages: newMessages,
+            };
+        });
+
+        const targetChat = updatedChats.find(c => c.id === chat.id)!;
+        onProcessCommand(command, targetChat, activePersona, updatedChats, config);
+    }, [chats, chat.id, activePersona, isSingleAgentMode, onProcessCommand]);
+
+    // ─── Navigation ──────────────────────────────────────────────────────
+    const handleGoBack = useCallback(() => {
+        setIsExiting(true);
+        setTimeout(onGoBack, 300);
+    }, [onGoBack]);
+
+    // ─── Scroll management ──────────────────────────────────────────────
+    const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
+        conversationEndRef.current?.scrollIntoView({ behavior });
+    }, []);
+
+    useEffect(() => {
+        if (isUserAtBottom) {
+            scrollToBottom('smooth');
+        }
+    }, [chat.messages.length, lastMessage?.content, isUserAtBottom, scrollToBottom]);
     
-    const handleExportChat = () => {
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const onScroll = () => {
+            const threshold = 50;
+            const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+            setIsUserAtBottom(atBottom);
+            setShowScrollButton(!atBottom);
+        };
+
+        container.addEventListener('scroll', onScroll, { passive: true });
+        onScroll(); // initial check
+        return () => container.removeEventListener('scroll', onScroll);
+    }, []);
+
+    // ─── Textarea auto-resize ────────────────────────────────────────────
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [inputText]);
+
+    // ─── Submit message ──────────────────────────────────────────────────
+    const handleTextSubmit = useCallback((event?: React.FormEvent) => {
+        event?.preventDefault();
+        const command = inputText.trim();
+        
+        if (!command || !activePersona || !isIdle) return;
+        if (isSubmittingRef.current) return; // guard double-submit
+
+        isSubmittingRef.current = true;
+        setInputText('');
+
+        dispatchCommand(command, (msgs) => [
+            ...msgs,
+            { role: 'user', content: command } as Message,
+            { role: 'agent', content: '', sources: [], variants: [], activeVariantIndex: 0 } as Message,
+        ], nextMessageConfig);
+
+        // Reset guard after a tick
+        requestAnimationFrame(() => { isSubmittingRef.current = false; });
+    }, [inputText, activePersona, isIdle, dispatchCommand, nextMessageConfig]);
+
+    // ─── Regenerate last response ────────────────────────────────────────
+    const handleRegenerate = useCallback(() => {
+        if (!activePersona || !isIdle) return;
+
+        // Find last user message (reverse search)
+        const lastUserMessage = [...chat.messages].reverse().find(m => m.role === 'user');
+        if (!lastUserMessage) return;
+
+        dispatchCommand(lastUserMessage.content, (msgs) => {
+            const newMsgs = [...msgs];
+            const lastMsg = newMsgs[newMsgs.length - 1];
+
+            if (lastMsg?.role === 'agent') {
+                // Immutable update - create new object instead of mutating
+                newMsgs[newMsgs.length - 1] = {
+                    ...lastMsg,
+                    content: '',
+                    sources: [],
+                };
+            }
+            return newMsgs;
+        });
+    }, [activePersona, isIdle, chat.messages, dispatchCommand]);
+    
+    // ─── Edit user message and re-generate ───────────────────────────────
+    const handleEditUserMessage = useCallback((messageIndex: number, newContent: string) => {
+        if (!activePersona || !isIdle) return;
+
+        dispatchCommand(newContent, (msgs) => {
+            const truncated = msgs.slice(0, messageIndex);
+            const updatedUserMessage: Message = { ...msgs[messageIndex], content: newContent };
+            const placeholder: Message = { role: 'agent', content: '' };
+            return [...truncated, updatedUserMessage, placeholder];
+        });
+    }, [activePersona, isIdle, dispatchCommand]);
+
+    // ─── Variant navigation (immutable) ──────────────────────────────────
+    const handleVariantChange = useCallback((direction: 'prev' | 'next') => {
+        setChats(prevChats => prevChats.map(c => {
+            if (c.id !== chat.id) return c;
+
+            const messages = c.messages.map((msg, idx) => {
+                // Only process the last message
+                if (idx !== c.messages.length - 1) return msg;
+                if (msg.role !== 'agent' || !msg.variants || msg.activeVariantIndex === undefined) return msg;
+
+                const totalVariants = msg.variants.length;
+                let newIndex = msg.activeVariantIndex;
+
+                if (direction === 'prev' && newIndex > 0) newIndex--;
+                else if (direction === 'next' && newIndex < totalVariants - 1) newIndex++;
+
+                // No change needed
+                if (newIndex === msg.activeVariantIndex) return msg;
+
+                const variant = msg.variants[newIndex];
+                if (!variant) return msg;
+
+                // Return new object (immutable)
+                return {
+                    ...msg,
+                    content: variant.content,
+                    sources: variant.sources,
+                    activeVariantIndex: newIndex,
+                };
+            });
+
+            return { ...c, messages };
+        }));
+    }, [chat.id, setChats]);
+
+    // ─── Suggestion click ────────────────────────────────────────────────
+    const handleSuggestionClick = useCallback((suggestion: string) => {
+        if (!activePersona || !isIdle) return;
+
+        setInputText('');
+
+        dispatchCommand(suggestion, (msgs) => [
+            ...msgs,
+            { role: 'user', content: suggestion } as Message,
+            { role: 'agent', content: '' } as Message,
+        ]);
+    }, [activePersona, isIdle, dispatchCommand]);
+
+    // ─── Keyboard handler ────────────────────────────────────────────────
+    const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleTextSubmit();
+        }
+    }, [handleTextSubmit]);
+    
+    // ─── Chat settings update ────────────────────────────────────────────
+    const handleChatUpdate = useCallback((key: keyof Chat, value: any) => {
+        setChats(prev => prev.map(c => c.id === chat.id ? { ...c, [key]: value } : c));
+    }, [chat.id, setChats]);
+
+    const handlePersonaChange = useCallback((newPersonaId: string) => {
+        const newPersona = personas.find(p => p.id === newPersonaId);
+        if (!newPersona) return;
+
+        setChats(prev => prev.map(c => {
+            if (c.id !== chat.id) return c;
+            return {
+                ...c,
+                personaId: newPersona.id,
+                model: newPersona.model || 'gemini-3-flash-preview',
+                operatingMode: newPersona.operatingMode || OperatingMode.None,
+                temperature: newPersona.temperature,
+                topK: newPersona.topK,
+                topP: newPersona.topP,
+            };
+        }));
+    }, [personas, chat.id, setChats]);
+
+    // ─── Advanced config handlers ────────────────────────────────────────
+    const handleNextMessageConfigChange = useCallback((key: keyof GenerationConfig, value: number) => {
+        setNextMessageConfig(prev => ({ ...prev, [key]: value }));
+    }, []);
+
+    const handleResetNextMessageConfig = useCallback(() => {
+        setNextMessageConfig({
+            temperature: chat.temperature ?? activePersona?.temperature,
+            topK: chat.topK ?? activePersona?.topK,
+            topP: chat.topP ?? activePersona?.topP,
+        });
+    }, [chat.temperature, chat.topK, chat.topP, activePersona]);
+    
+    // ─── Export ──────────────────────────────────────────────────────────
+    const handleExportChat = useCallback(() => {
         const chatData = JSON.stringify(chat, null, 2);
         const blob = new Blob([chatData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
+        
         const a = document.createElement('a');
         a.href = url;
         const safeTitle = chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         a.download = `${safeTitle || 'conversa'}.json`;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
+        
+        // Cleanup after next tick to ensure download starts
+        requestAnimationFrame(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }, [chat]);
 
-    const isNextMessageConfigModified = 
+    // ─── Derived state for config indicators ─────────────────────────────
+    const isNextMessageConfigModified = useMemo(() => (
         nextMessageConfig.temperature !== (chat.temperature ?? activePersona?.temperature ?? undefined) ||
         nextMessageConfig.topK !== (chat.topK ?? activePersona?.topK ?? undefined) ||
-        nextMessageConfig.topP !== (chat.topP ?? activePersona?.topP ?? undefined);
+        nextMessageConfig.topP !== (chat.topP ?? activePersona?.topP ?? undefined)
+    ), [nextMessageConfig, chat.temperature, chat.topK, chat.topP, activePersona]);
 
-    const isSessionConfigModified = chat.operatingMode !== (activePersona?.operatingMode ?? OperatingMode.None);
+    const isSessionConfigModified = useMemo(() => (
+        chat.operatingMode !== (activePersona?.operatingMode ?? OperatingMode.None)
+    ), [chat.operatingMode, activePersona]);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        const scrollHeight = textareaRef.current.scrollHeight;
-        textareaRef.current.style.height = `${scrollHeight}px`;
-    }
-  }, [inputText]);
+    // ─── Referral modal handler ──────────────────────────────────────────
+    const handleShowReferralModal = useCallback(() => {
+        setReferralModalPersonaId(chat.personaId);
+        setIsReferralModalOpen(true);
+    }, [chat.personaId]);
 
-    if (!activePersona) return null; // Or a loading/error state
+    const handleCloseReferralModal = useCallback(() => {
+        setIsReferralModalOpen(false);
+    }, []);
 
+    // ─── Guard: no persona found ─────────────────────────────────────────
+    if (!activePersona) return null;
+
+    // ─── Render ──────────────────────────────────────────────────────────
     return (
         <div className={`h-screen flex flex-col ${isSingleAgentMode ? 'bg-transparent' : 'bg-gray-900'} ${isExiting ? 'animate-slide-out-down' : 'animate-slide-in-up'}`}>
              <header className="py-3 bg-gray-950/70 backdrop-blur-lg sticky top-0 z-10 border-b border-gray-800 flex items-center gap-2 px-4 flex-shrink-0">
@@ -326,27 +389,24 @@ export const ChatView: React.FC<ChatViewProps> = ({
             
             <main ref={scrollContainerRef} className="relative flex-grow flex flex-col p-4 overflow-y-auto min-h-0">
               <div className="flex-grow space-y-6 pb-4">
-                {chat?.messages.map((msg, index) => {
-                    const isLastMessage = index === chat.messages.length - 1;
+                {chat.messages.map((msg, index) => {
+                    const isLastMsg = index === chat.messages.length - 1;
                     return (
                         <MessageBubble 
-                            key={index}
+                            key={getMessageKey(msg, index)}
                             index={index} 
                             message={msg}
-                            isLastMessage={isLastMessage}
+                            isLastMessage={isLastMsg}
                             onRegenerate={handleRegenerate}
                             onVariantChange={handleVariantChange}
                             onEdit={(newContent) => handleEditUserMessage(index, newContent)}
-                            isThinking={status === AgentStatus.Thinking}
+                            isThinking={isThinking}
                             personaId={chat.personaId}
-                            onShowReferralModal={() => {
-                                setReferralModalPersonaId(chat.personaId);
-                                setIsReferralModalOpen(true);
-                            }}
+                            onShowReferralModal={handleShowReferralModal}
                         />
-                    )
+                    );
                  })}
-                {chat.messages.length <= 1 && !isSingleAgentMode && (
+                {showSuggestions && (
                   <div className="w-full max-w-2xl mx-auto">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
                         {SUGGESTION_CHIPS.map((suggestion, index) => (
@@ -405,8 +465,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               value={inputText}
                               onChange={(e) => setInputText(e.target.value)}
                               onKeyDown={handleInputKeyDown}
-                              placeholder={t(status !== AgentStatus.Idle ? 'chat.inputPlaceholderThinking' : 'chat.inputPlaceholder')}
-                              disabled={status !== AgentStatus.Idle}
+                              placeholder={t(!isIdle ? 'chat.inputPlaceholderThinking' : 'chat.inputPlaceholder')}
+                              disabled={!isIdle}
                               className="w-full min-h-[48px] max-h-48 py-3 pl-4 pr-24 bg-gray-800 border border-gray-700 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 resize-none overflow-y-auto transition-colors"
                               aria-label="Caixa de entrada de comando"
                               rows={1}
@@ -416,11 +476,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                       <button
                         type="submit"
-                        disabled={!inputText.trim() || status !== AgentStatus.Idle}
+                        disabled={!canSubmit}
                         className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-purple-400/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-gray-600 self-end"
                         aria-label={t('chat.send')}
                       >
-                        {status === AgentStatus.Thinking ? (
+                        {isThinking ? (
                            <div className="w-6 h-6 border-2 border-white rounded-full animate-spin border-t-transparent"></div>
                         ) : (
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -445,7 +505,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
             <ProfessionalReferralModal 
                 isOpen={isReferralModalOpen}
-                onClose={() => setIsReferralModalOpen(false)}
+                onClose={handleCloseReferralModal}
                 personaId={referralModalPersonaId}
             />
         </div>
