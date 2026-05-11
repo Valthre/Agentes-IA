@@ -51,6 +51,9 @@ export const enTranslations = {
     import: 'Import',
     importSuccess: '{{count}} chats imported successfully!',
     importError: 'Import failed. The file may be corrupt or in an invalid format.',
+    clearAll: 'Clear All',
+    confirmClearAll: 'Are you sure you want to delete ALL chat history? This action cannot be undone.',
+    clearAllSuccess: 'All chat history has been deleted.',
   },
   bottomNav: {
     hub: 'Hub',

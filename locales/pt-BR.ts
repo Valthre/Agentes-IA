@@ -51,6 +51,9 @@ export const ptBRTranslations = {
     import: 'Importar',
     importSuccess: '{{count}} conversas importadas com sucesso!',
     importError: 'Falha ao importar. O arquivo pode estar corrompido ou em formato inválido.',
+    clearAll: 'Limpar Tudo',
+    confirmClearAll: 'Tem certeza que deseja excluir TODO o histórico de conversas? Esta ação não pode ser desfeita.',
+    clearAllSuccess: 'Todo o histórico de conversas foi excluído.',
   },
   bottomNav: {
     hub: 'Hub',

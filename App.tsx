@@ -13,6 +13,8 @@ import { useTranslation } from './i18n';
 const API_KEYS_KEY = 'llm-api-keys';
 const PERSONAS_KEY = 'ai-agent-personas';
 const CHATS_KEY = 'ai-agent-chats';
+const ACTIVE_CHAT_ID_KEY = 'ai-agent-active-chat-id';
+const ACTIVE_TAB_KEY = 'ai-agent-active-tab';
 const ADVANCED_UI_KEY = 'ai-agent-advanced-ui';
 const DEFAULT_PROVIDER_KEY = 'llm-default-provider';
 
@@ -46,6 +48,8 @@ const App: React.FC = () => {
       const savedKeys = localStorage.getItem(API_KEYS_KEY);
       const savedPersonas = localStorage.getItem(PERSONAS_KEY);
       const savedChats = localStorage.getItem(CHATS_KEY);
+      const savedActiveChatId = localStorage.getItem(ACTIVE_CHAT_ID_KEY);
+      const savedActiveTab = localStorage.getItem(ACTIVE_TAB_KEY);
       const savedAdvancedUI = localStorage.getItem(ADVANCED_UI_KEY);
       const savedDefaultProvider = localStorage.getItem(DEFAULT_PROVIDER_KEY);
 
@@ -53,6 +57,8 @@ const App: React.FC = () => {
       setApiKeys(loadedKeys);
       if (savedPersonas) setPersonas(JSON.parse(savedPersonas));
       if (savedChats) setChats(JSON.parse(savedChats));
+      if (savedActiveChatId) setActiveChatId(savedActiveChatId);
+      if (savedActiveTab) setActiveTab(savedActiveTab as AppTab);
       if (savedAdvancedUI) setAdvancedInterfaceEnabled(JSON.parse(savedAdvancedUI));
       if (savedDefaultProvider) setDefaultProvider(JSON.parse(savedDefaultProvider));
 
@@ -105,11 +111,13 @@ const App: React.FC = () => {
     }
   }, [t]);
 
-  useEffect(() => { if (apiKeys !== null) localStorage.setItem(API_KEYS_KEY, JSON.stringify(apiKeys)); }, [apiKeys]);
-  useEffect(() => { localStorage.setItem(PERSONAS_KEY, JSON.stringify(personas)); }, [personas]);
-  useEffect(() => { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); }, [chats]);
-  useEffect(() => { localStorage.setItem(ADVANCED_UI_KEY, JSON.stringify(isAdvancedInterfaceEnabled)); }, [isAdvancedInterfaceEnabled]);
-  useEffect(() => { localStorage.setItem(DEFAULT_PROVIDER_KEY, JSON.stringify(defaultProvider)); }, [defaultProvider]);
+  useEffect(() => { if (!isInitialising && apiKeys !== null) localStorage.setItem(API_KEYS_KEY, JSON.stringify(apiKeys)); }, [apiKeys, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(PERSONAS_KEY, JSON.stringify(personas)); }, [personas, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); }, [chats, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(ACTIVE_CHAT_ID_KEY, activeChatId || ''); }, [activeChatId, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(ACTIVE_TAB_KEY, activeTab); }, [activeTab, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(ADVANCED_UI_KEY, JSON.stringify(isAdvancedInterfaceEnabled)); }, [isAdvancedInterfaceEnabled, isInitialising]);
+  useEffect(() => { if (!isInitialising) localStorage.setItem(DEFAULT_PROVIDER_KEY, JSON.stringify(defaultProvider)); }, [defaultProvider, isInitialising]);
 
   const handleSaveApiKeys = (keys: { [key in LlmProvider]?: string }, provider: LlmProvider) => {
     setApiKeys(keys);
@@ -263,6 +271,12 @@ const App: React.FC = () => {
           setActiveChatId(null);
       }
   };
+
+  const handleClearAll = () => {
+    setChats([]);
+    setActiveChatId(null);
+    showToast(t('chatHistory.clearAllSuccess'));
+  };
   
   const handleRenameChat = (id: string, newTitle: string) => {
       setChats(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
@@ -344,6 +358,7 @@ const App: React.FC = () => {
           onSelectAgent={handleSelectAgent}
           onNewChat={handleNewChat}
           onDeleteChat={handleDeleteChat}
+          onClearAll={handleClearAll}
           onRenameChat={handleRenameChat}
           onSavePersonas={handleSavePersonas}
           onImportChats={handleImportChats}

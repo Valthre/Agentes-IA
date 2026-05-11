@@ -51,6 +51,9 @@ export const esTranslations = {
     import: 'Importar',
     importSuccess: '¡{{count}} chats importados con éxito!',
     importError: 'Falló la importación. El archivo puede estar corrupto o en un formato no válido.',
+    clearAll: 'Borrar Todo',
+    confirmClearAll: '¿Estás seguro de que quieres eliminar TODO el historial de chats? Esta ação no se puede deshacer.',
+    clearAllSuccess: 'Todo el historial de chats ha sido eliminado.',
   },
   bottomNav: {
     hub: 'Hub',

@@ -17,6 +17,7 @@ interface MainTabViewProps {
     onSelectAgent: (agent: Persona) => void;
     onNewChat: (persona?: Persona) => void;
     onDeleteChat: (id: string) => void;
+    onClearAll: () => void;
     onRenameChat: (id: string, newTitle: string) => void;
     onSavePersonas: (personas: Persona[]) => void;
     apiKeys: { [key in LlmProvider]?: string };
@@ -43,6 +44,7 @@ const MainTabView: React.FC<MainTabViewProps> = (props) => {
                             chats={props.chats}
                             onSelectChat={props.onSelectChat}
                             onDeleteChat={props.onDeleteChat}
+                            onClearAll={props.onClearAll}
                             onRenameChat={props.onRenameChat}
                             onImportChats={props.onImportChats}
                         />;
