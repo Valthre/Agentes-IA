@@ -7,18 +7,46 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+
+# Environment files (do not commit keys)
+# `.env.local` is used for GEMINI_API_KEY and should be ignored.
+.env
+.env.*
 *.local
 
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Miscellaneous caches and runtime files
+.cache/
+.parcel-cache/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+
+# Local proxy / tooling directories
+qwen-proxy/
+
+# Optional: JetBrains
+.idea/
+
+# Keep package-lock.json committed; do not ignore lockfiles used by the repo
