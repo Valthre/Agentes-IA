@@ -31,6 +31,9 @@ dist-ssr/
 *.sln
 *.sw?
 
+# Devconteiner files
+.devcontainer/
+
 # Miscellaneous caches and runtime files
 .cache/
 .parcel-cache/
