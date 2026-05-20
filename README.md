@@ -158,15 +158,13 @@ Antes de começar, certifique-se de ter instalado:
 
 ---
 
-## 🔑 Variáveis de Ambiente
+## 🔑 API Key
 
-Crie um arquivo `.env.local` na raiz do projeto. Ele é ignorado pelo git e nunca deve ser commitado:
+Ao abrir a aplicação pela primeira vez, uma tela solicitará diretamente a sua **Google Gemini API Key** ([obtenha aqui](https://aistudio.google.com/apikey)).
 
-```env
-GEMINI_API_KEY=sua_chave_api_gemini_aqui
-```
+Após inserir a chave, o app cria automaticamente o arquivo `.env.local` na raiz do projeto e armazena o valor. A chave é mantida **apenas no `localStorage` do navegador** e no `.env.local` do projeto, nunca enviada a servidores de terceiros.
 
-> ⚠️ A chave é armazenada apenas no navegador do usuário (via Configurações), nunca enviada a servidores de terceiros.
+> ⚠️ O arquivo `.env.local` é ignorado pelo git. Nunca o commit.
 
 ---
 
@@ -183,7 +181,7 @@ GEMINI_API_KEY=sua_chave_api_gemini_aqui
 
 1. **Clone o repositório**
    ```bash
-   git clone https://github.com/<usuario>/Agentes-IA.git
+   git clone https://github.com/Valthre/Agentes-IA.git
    cd Agentes-IA
    ```
 
@@ -192,18 +190,14 @@ GEMINI_API_KEY=sua_chave_api_gemini_aqui
    npm install
    ```
 
-3. **Configure a variável de ambiente**
-   ```bash
-   cp .env.example .env.local   # ou crie .env.local manualmente
-   # Edite .env.local e adicione sua GEMINI_API_KEY
-   ```
-
-4. **Execute o ambiente de desenvolvimento**
+3. **Execute o ambiente de desenvolvimento**
    ```bash
    npm run dev
    ```
 
-5. **Abra a aplicação** no navegador usando o link fornecido pelo Vite (geralmente `http://localhost:5173`). Clique na engrenagem de "Configurações" e insira sua API Key.
+4. **Insira a API Key** na tela inicial que surge automaticamente. O app cria o `.env.local` para você.
+
+5. **Comece a conversar!** Após confirmar a chave, a interface do chat já estará disponível.
 
 ---
 
@@ -222,11 +216,11 @@ GEMINI_API_KEY=sua_chave_api_gemini_aqui
 
 | Problema | Causa Comum | Solução |
 |----------|-------------|---------|
-| `GEMINI_API_KEY não encontrada` | `.env.local` ausente ou mal configurada | Crie `.env.local` com a chave válida |
+| Tela de API Key não aparece | `localStorage` bloqueado ou `GEMINI_API_KEY` já existe no `.env.local` | Limpe o `localStorage` ou remova a chave do `.env.local` e recarregue |
 | Erro de CORS | Chave inválida ou IP bloqueado pela Google | Verifique o ID da chave em [Google AI Studio](https://aistudio.google.com/apikey) |
 | Chat não exibe mensagens | `LocalStorage` bloqueado no navegador | Verifique permissões do navegador ou use abas sem restrições (incognito) |
 | Erro ao compilar | Dependências desatualizadas | Rode `rm -rf node_modules && npm install` |
-| Modal de configurações não abre | Script de HMR com conflito | Cmd+Shift+R (Mac) / Ctrl+Shift+R (Windows) |
+| `.env.local` não é criado automaticamente | Permissões de escrita na raiz do projeto | Crie o arquivo manualmente ou ajuste permissões da pasta |
 
 ---
 
