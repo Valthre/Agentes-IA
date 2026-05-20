@@ -51,8 +51,3 @@
 - `package.json` — dependency list and scripts.
 - `services/llm/gemini.ts` — core Gemini streaming logic.
 - `types.ts` — data model expectations.
-
-## Proxy servers
-- Execute the proxies via automation script:
-  - Run QwenProxy: `./run.sh`
-  - Run DeepsProxy: `./drun.sh`
