@@ -50,6 +50,10 @@ pnpm-debug.log*
 qwenproxy/
 deepsproxy/
 
+# Script
+run.sh
+drun.sh
+
 # Optional: JetBrains
 .idea/
 
