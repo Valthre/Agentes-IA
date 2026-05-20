@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "tsc --noEmit",
-    "preview": "vite preview --port 2000"
+    "preview": "vite preview --port 8989"
   },
   "dependencies": {
     "@google/genai": "^1.25.0",
